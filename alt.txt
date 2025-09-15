@@ -1,0 +1,21 @@
+# from sys import exit # terminate the program
+
+# # Game variables
+# GAME_WIDTH = 512
+# GAME_HEIGHT = 512
+
+# pygame.init() # Always needed to initialize pygame
+# window = pygame.display.set_mode((GAME_WIDTH, GAME_HEIGHT)) # creating window width and height
+# pygame.display.set_caption("Alex's Game Tutorial") # Title of window
+# clock = pygame.time.Clock()
+
+# # game loop keeps window open
+# while True:
+#     # control c to terminate program
+#     # check for events
+#     for event in pygame.event.get():
+#         if event.type == pygame.QUIT: # x button to exit
+#             pygame.quit()
+#             exit()
+#     pygame.display.update()
+#     clock.tick(60) # 60 frames per second (fps)
