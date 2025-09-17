@@ -1,17 +1,42 @@
 import pygame
 
-# Player class
-class player(pygame.sprite.Sprite):
-    def __init__(self, name, gender, race):
-        super().__init__() # Always call this first when using pygame.sprite.Sprite
-        self.name = name
-        self.gender = gender
-        self.race = race
+class Player(pygame.sprite.Sprite):
+    def __init__(self, x, y, animations):
+        super().__init__()
+        self.animations = animations
+        self.direction = "down"
+        self.frame = 0
+        self.image = self.animations[self.direction][self.frame]
+        self.rect = self.image.get_rect(topleft=(x, y))
+        self.animation_timer = 0
 
-        self.size = 31
-        self.image = pygame.Surface((self.size, self.size)) # Make a square
-        self.image.fill((50, 150, 255)) # blue
-        self.rect = self.image.get_rect()
-        self.rect.center = (0, 0) # world position
+    def update(self, keys_pressed, dt):
+        speed = 150  # pixels per second
+        dx = dy = 0
 
-player1 = player("Alex", "Male", "Human")
+        if keys_pressed[pygame.K_UP] or keys_pressed[pygame.K_w]:
+            self.direction = "up"
+            dy -= speed * dt
+        if keys_pressed[pygame.K_DOWN] or keys_pressed[pygame.K_s]:
+            self.direction = "down"
+            dy += speed * dt
+        if keys_pressed[pygame.K_LEFT] or keys_pressed[pygame.K_a]:
+            self.direction = "left"
+            dx -= speed * dt
+        if keys_pressed[pygame.K_RIGHT] or keys_pressed[pygame.K_d]:
+            self.direction = "right"
+            dx += speed * dt
+
+        self.rect.x += int(dx)
+        self.rect.y += int(dy)
+
+        # Animation
+        if dx != 0 or dy != 0:
+            self.animation_timer += dt
+            if self.animation_timer > 0.15:
+                self.frame = (self.frame + 1) % 3
+                self.animation_timer = 0
+        else:
+            self.frame = 0  # idle
+
+        self.image = self.animations[self.direction][self.frame]
