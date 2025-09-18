@@ -19,9 +19,7 @@ clock = pygame.time.Clock() # limit frame rate (60 FPS) & measure delta time bet
 ASSETS = Path(__file__).parent / "assets"
 TERRAIN = ASSETS / "terrain"
 PLAYER = ASSETS / "player"
-
 SOLID = {"R", "T"}
-
 SPEED = 200 # pixels per second
 
 
@@ -55,18 +53,27 @@ tiles = {
     ],
     "W": pygame.image.load(TERRAIN / "water.png").convert_alpha(),
     "R": pygame.image.load(TERRAIN / "rock.png").convert_alpha(),
-    "T": pygame.image.load(TERRAIN / "my_pixel_tree.png").convert_alpha(),
+    "T": [
+        pygame.image.load(TERRAIN / "trees" / "my_pixel_tree.png").convert_alpha(),
+        pygame.image.load(TERRAIN / "trees" / "tree_variant_1.png").convert_alpha()
+    ]
 
-    "default": pygame.image.load(TERRAIN / "grass" / "grass_variant_1.png").convert_alpha()
+    # "default": pygame.image.load(TERRAIN / "grass" / "grass_variant_1.png").convert_alpha()
 }
 
 # If any tile isn't exactly 32x32, force-resize:
-for k, surf in tiles.items():
-    # if k != "T" and surf.get_size() != (TILE, TILE):
-    if k == "G" or k == "T":
-        continue
-    if surf.get_size() != (TILE, TILE):
-        tiles[k] = pygame.transform.smoothscale(surf, (TILE, TILE))
+# for k, surf in tiles.items():
+#     if k == "G" or k == "T":
+#         continue
+for k, surf, in tiles.items():
+    if isinstance(surf, list):
+        for i in range(len(surf)):
+            if surf[i].get_size() != (TILE, TILE):
+                surf[i] = pygame.transform.scale(surf[i], (TILE, TILE)).convert_alpha()
+    else:
+        if surf.get_size() != (TILE, TILE):
+            tiles[k] = pygame.transform.scale(surf, (TILE, TILE)).convert_alpha()
+            # print(tiles["R"].get_flags() & pygame.SRCALPHA)
 
 TILE_SIZE = 48
 
@@ -74,7 +81,7 @@ def get_tile(x, y):
     random.seed(hash((x, y))) # Deterministic seed
     r = random.random()
     
-    if r < 0.7:
+    if r < 0.8:
         return "G"
     elif r < 0.85:
         return "R"
@@ -82,6 +89,12 @@ def get_tile(x, y):
         return "T"
     else:
         return "W"
+
+def choose_tile(key):
+    tile_entry = tiles.get(key)
+    if isinstance(tile_entry, list):
+        return random.choice(tile_entry)
+    return tile_entry
 
 def draw_tilemap(surface, cam_x, cam_y):
 
@@ -98,13 +111,23 @@ def draw_tilemap(surface, cam_x, cam_y):
             screen_x = col * TILE - cam_x
             screen_y = row * TILE - cam_y
 
-            if ch == "G":
-                tile = random.choice(tiles["G"])
-            else:
-                tile = tiles.get(ch)
-                if tile is None:
-                    tile = tiles["default"]
-            surface.blit(tile, (screen_x, screen_y))
+            tile = choose_tile(ch)
+
+            if ch in {"T", "R"}:
+                # Always draw a base grass tile first
+                bg = random.choice(tiles["G"])
+                surface.blit(bg, (screen_x, screen_y))
+            # if ch == "G":
+            #     tile = random.choice(tiles["G"])
+            # elif ch == "T":
+            #     tile = random.choice(tiles["T"])
+            # else:
+            #     tile = tiles.get(ch)
+                # if tile is None:
+                #     tile = tiles["default"]
+            tile = choose_tile(ch)
+            surface.blit(tile, (screen_x, screen_y)) # Critical to terrain visibility
+
 
 def is_blocked(tile_char):
     return tile_char in SOLID
@@ -147,7 +170,7 @@ while running:
     window.blit(player1.image, player_draw_rect) # keeps the player at the center of the screen
 
 
-    pygame.display.flip()
+    pygame.display.flip() # Critical to game being visible
 
 pygame.quit()
 sys.exit()

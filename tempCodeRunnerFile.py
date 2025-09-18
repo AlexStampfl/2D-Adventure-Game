@@ -1,2 +1,2 @@
-
-    if keys[pygame.K_DOWN] or keys[pygame.K_s]: # Down
+if tile is None:
+                    tile = tiles["default"]
