@@ -60,11 +60,6 @@ tiles = {
 
     # "default": pygame.image.load(TERRAIN / "grass" / "grass_variant_1.png").convert_alpha()
 }
-
-# If any tile isn't exactly 32x32, force-resize:
-# for k, surf in tiles.items():
-#     if k == "G" or k == "T":
-#         continue
 for k, surf, in tiles.items():
     if isinstance(surf, list):
         for i in range(len(surf)):
@@ -77,17 +72,41 @@ for k, surf, in tiles.items():
 
 TILE_SIZE = 48
 
+LAKE_DISTANCE = 25 # min distance between lakes
+LAKE_RADIUS = 3 # controls size of lakes
+LAKE_CHANCE = 0.3 # % of map tiles considered for lake centers
+MAP_WIDTH = 100
+MAP_HEIGHT = 100
+
+lake_centers = []
+
+def is_far_enough(x, y):
+    for lx, ly in lake_centers:
+        if math.hypot(lx - x, ly - y) < LAKE_DISTANCE: # take time to understand this later
+            return False
+    return True
+
+def generate_lake_center(map_width, map_height):
+    for x in range(0, map_width, 4):
+        for y in range(0, map_height, 4):
+            random.seed(hash((x, y)))
+            if random.random() < LAKE_CHANCE:
+                if is_far_enough(x, y):
+                    lake_centers.append((x, y))
+    print(f"Lake center added at ({x}, {y})")
+
+generate_lake_center(MAP_WIDTH, MAP_HEIGHT)
+
+
+
+# Take time to understand this more later
+
+
 def is_water(x, y):
-    random.seed(hash((x // 4, y // 4))) # change 4 to control lake size
-    center_chance = random.random()
-
-    # Make the lakes less frequent
-    if center_chance < 0.1: # 20% chance this 4x4 chunk is a water core
-        # Now check if (x, y) is near the center of a water blob
-        distance = math.hypot((x % 4) - 2, (y % 4) - 2)
-        return distance <= 2.8 # Make the lakes bigger
+    for lx, ly in lake_centers:
+        if math.hypot(x - lx, y - ly) <= LAKE_RADIUS:
+            return True
     return False
-
 
 def get_tile(x, y):
     if is_water(x, y):
