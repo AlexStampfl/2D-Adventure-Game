@@ -77,7 +77,22 @@ for k, surf, in tiles.items():
 
 TILE_SIZE = 48
 
+def is_water(x, y):
+    random.seed(hash((x // 4, y // 4))) # change 4 to control lake size
+    center_chance = random.random()
+
+    # Make the lakes less frequent
+    if center_chance < 0.1: # 20% chance this 4x4 chunk is a water core
+        # Now check if (x, y) is near the center of a water blob
+        distance = math.hypot((x % 4) - 2, (y % 4) - 2)
+        return distance <= 2.8 # Make the lakes bigger
+    return False
+
+
 def get_tile(x, y):
+    if is_water(x, y):
+        return "W"
+    
     random.seed(hash((x, y))) # Deterministic seed
     r = random.random()
     
@@ -88,7 +103,7 @@ def get_tile(x, y):
     elif r < 0.95:
         return "T"
     else:
-        return "W"
+        return "G"
 
 def choose_tile(key):
     tile_entry = tiles.get(key)
@@ -114,17 +129,9 @@ def draw_tilemap(surface, cam_x, cam_y):
             tile = choose_tile(ch)
 
             if ch in {"T", "R"}:
-                # Always draw a base grass tile first
+                # Always draw a base grass tile first - BIG ISSUE resolved. This took forever to figure out
                 bg = random.choice(tiles["G"])
                 surface.blit(bg, (screen_x, screen_y))
-            # if ch == "G":
-            #     tile = random.choice(tiles["G"])
-            # elif ch == "T":
-            #     tile = random.choice(tiles["T"])
-            # else:
-            #     tile = tiles.get(ch)
-                # if tile is None:
-                #     tile = tiles["default"]
             tile = choose_tile(ch)
             surface.blit(tile, (screen_x, screen_y)) # Critical to terrain visibility
 
