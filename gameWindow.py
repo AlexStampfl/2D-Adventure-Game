@@ -10,8 +10,11 @@ from player import Player
 # -- init --
 pygame.init() # Initialize pygame
 TILE = 48
+CHUNK = 16, 16 # In tiles? 16x16 is a chunk?
+
 
 SCREEN_W, SCREEN_H = 800, 600
+
 window = pygame.display.set_mode((SCREEN_W, SCREEN_H)) # creates window surface you draw on
 pygame.display.set_caption("2D Adventure Game") # Set title
 clock = pygame.time.Clock() # limit frame rate (60 FPS) & measure delta time between frames
@@ -42,7 +45,6 @@ def load_animations(path):
 animations = load_animations("assets/player")
 player1 = Player(300, 300, animations)
 
-
 # Load terrain tiles
 tiles = {
     "G":[ # G for grass
@@ -50,6 +52,9 @@ tiles = {
         pygame.image.load(TERRAIN / "grass" / "grass_variant_2.png").convert_alpha(),
         pygame.image.load(TERRAIN / "grass"/ "grass_variant_3.png").convert_alpha(),
         pygame.image.load(TERRAIN / "grass" / "grass_variant_4.png").convert_alpha(),
+        pygame.image.load(TERRAIN / "grass" / "flower_variant_1.png").convert_alpha(),
+        pygame.image.load(TERRAIN / "grass" / "flower_variant_2.png").convert_alpha(),
+        pygame.image.load(TERRAIN / "grass" / "flower_variant_3.png").convert_alpha(),
     ],
     "W": pygame.image.load(TERRAIN / "water.png").convert_alpha(),
     "R": pygame.image.load(TERRAIN / "rock.png").convert_alpha(),
@@ -57,9 +62,54 @@ tiles = {
         pygame.image.load(TERRAIN / "trees" / "my_pixel_tree.png").convert_alpha(),
         pygame.image.load(TERRAIN / "trees" / "tree_variant_1.png").convert_alpha()
     ]
-
-    # "default": pygame.image.load(TERRAIN / "grass" / "grass_variant_1.png").convert_alpha()
 }
+
+# Biome setup
+BIOME = {
+    "Grassland":{
+        "G":[
+            pygame.image.load(TERRAIN / "grass" / "grass_variant_1.png").convert_alpha(),
+            pygame.image.load(TERRAIN / "grass" / "grass_variant_2.png").convert_alpha(),
+            pygame.image.load(TERRAIN / "grass"/ "grass_variant_3.png").convert_alpha(),
+            pygame.image.load(TERRAIN / "grass" / "grass_variant_4.png").convert_alpha(),
+            pygame.image.load(TERRAIN / "grass" / "flower_variant_1.png").convert_alpha(),
+            pygame.image.load(TERRAIN / "grass" / "flower_variant_2.png").convert_alpha(),
+            pygame.image.load(TERRAIN / "grass" / "flower_variant_3.png").convert_alpha(),
+        ],
+        "W": pygame.image.load(TERRAIN / "water.png").convert_alpha(),
+        "T":[
+            pygame.image.load(TERRAIN / "trees" / "my_pixel_tree.png").convert_alpha(),
+            pygame.image.load(TERRAIN / "trees" / "tree_variant_1.png").convert_alpha()
+        ],          
+    },
+    "Forest":{
+        pygame.image.load(TERRAIN / "trees" / "my_pixel_tree.png").convert_alpha(),
+        pygame.image.load(TERRAIN / "trees" / "tree_variant_1.png").convert_alpha()
+    },
+    "Mountain":{
+        "R": pygame.image.load(TERRAIN / "rock.png").convert_alpha(),
+    },
+}
+
+# Calculate Biome
+BIOME_SIZE = 100
+
+def get_biome_name(x, y):
+    biome_x = x // BIOME_SIZE
+    biome_y = y // BIOME_SIZE
+    
+    random.seed(hash((biome_x, biome_y))) # Deterministic seed - looks random, but stays the same (a single location won't change)
+
+    r = random.random()
+
+    if r < 0.7:
+        return "Grassland"
+    elif r < 0.9:
+        return "Forest"
+    else:
+        return "Mountain"
+
+
 for k, surf, in tiles.items():
     if isinstance(surf, list):
         for i in range(len(surf)):
@@ -68,15 +118,14 @@ for k, surf, in tiles.items():
     else:
         if surf.get_size() != (TILE, TILE):
             tiles[k] = pygame.transform.scale(surf, (TILE, TILE)).convert_alpha()
-            # print(tiles["R"].get_flags() & pygame.SRCALPHA)
 
 TILE_SIZE = 48
 
 LAKE_DISTANCE = 25 # min distance between lakes
 LAKE_RADIUS = 3 # controls size of lakes
 LAKE_CHANCE = 0.3 # % of map tiles considered for lake centers
-MAP_WIDTH = 100
-MAP_HEIGHT = 100
+MAP_WIDTH = 500
+MAP_HEIGHT = 500
 
 lake_centers = []
 
@@ -87,7 +136,7 @@ def is_far_enough(x, y):
     return True
 
 def generate_lake_center(map_width, map_height):
-    for x in range(0, map_width, 4):
+    for x in range(0, map_width, 4): # revision needed - not checking for negatives
         for y in range(0, map_height, 4):
             random.seed(hash((x, y)))
             if random.random() < LAKE_CHANCE:
@@ -97,11 +146,7 @@ def generate_lake_center(map_width, map_height):
 
 generate_lake_center(MAP_WIDTH, MAP_HEIGHT)
 
-
-
 # Take time to understand this more later
-
-
 def is_water(x, y):
     for lx, ly in lake_centers:
         if math.hypot(x - lx, y - ly) <= LAKE_RADIUS:
@@ -112,8 +157,33 @@ def get_tile(x, y):
     if is_water(x, y):
         return "W"
     
+    biome = get_biome_name(x, y)
+
     random.seed(hash((x, y))) # Deterministic seed
     r = random.random()
+    
+    if biome == "Grassland":
+        if r < 0.8: # 80% chance
+            return "G"
+        if r < 0.85:
+            return "R"
+        if r < 0.95:
+            return "T"
+        else:
+            return "G"
+    elif biome == "Forest":
+        if r < 0.6: # 60% chance
+            return "T"
+        elif r < 0.85:
+            return "G"
+        else:
+            return "R"
+    elif biome == "Mountain":
+        if r < 0.5:
+            return "R"
+        else:
+            return "G"
+    
     
     if r < 0.8:
         return "G"
@@ -158,7 +228,7 @@ def draw_tilemap(surface, cam_x, cam_y):
 def is_blocked(tile_char):
     return tile_char in SOLID
 
-# Game loop - loop that keeps the window open and the game running
+# Game loop - loop that keeps the window open and the game running and renders stuff
 running = True
 while running:
     keys = pygame.key.get_pressed()
@@ -194,6 +264,14 @@ while running:
     player_draw_rect = player1.image.get_rect(center=(SCREEN_W // 2, SCREEN_H // 2))
     # window.blit(player1.image, player1.rect)
     window.blit(player1.image, player_draw_rect) # keeps the player at the center of the screen
+
+    font = pygame.font.SysFont("Arial", 20)
+    # After calculating camera_x and camera_y
+    tile_x = camera_x // TILE
+    tile_y = camera_y // TILE
+    biome_name = get_biome_name(tile_x, tile_y)
+    biome_text = font.render(f"Biome: {biome_name}", True, (255, 255, 255))
+    window.blit(biome_text, (10, 10))
 
 
     pygame.display.flip() # Critical to game being visible
